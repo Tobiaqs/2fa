@@ -1,0 +1,29 @@
+#!/bin/bash
+
+BOLD_ON="\e[1m"
+BOLD_OFF="\e[21m"
+
+CONFIG_FILE="$HOME/.config/2fa_secrets.gpg"
+
+if [[ ! -f "$CONFIG_FILE" ]]; then
+	echo "Secrets configuration file not found at $CONFIG_FILE."
+	exit 1
+fi
+
+
+
+COUNT=1
+gpg2 --decrypt "$CONFIG_FILE" 2>/dev/null | while read line; do
+	NAME=`cut -f1 <<< "$line"`
+	SECRET=`cut -f2 <<< "$line"`
+	CODE=`oathtool --base32 --totp "$SECRET"`
+	if [[ "$1" != "" ]]; then
+		if [[ "$1" == "${NAME,,}" || "$1" == "$COUNT" ]]; then
+			echo -n "$CODE" | xclip -selection c
+			printf "($COUNT) $BOLD_ON$NAME$BOLD_OFF: $CODE (copied)\n"
+		fi
+	else
+		printf "($COUNT) $BOLD_ON$NAME$BOLD_OFF: $CODE\n"
+	fi
+	COUNT=$(($COUNT+1))
+done
